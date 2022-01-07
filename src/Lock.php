@@ -10,16 +10,17 @@ use SysvSemaphore;
 class Lock
 {
     private const PERMISSION = 0666;
-    private SysvSemaphore $id;
+
     private string $key;
+
+    private SysvSemaphore $id;
+
     private int $maxAcquire;
+
     private bool $autoRelease;
 
-    /**
-     * @param string $key
-     * @param int $maxAcquire
-     * @param bool $autoRelease
-     */
+    private bool $registered = false;
+
     public function __construct(string $key, int $maxAcquire = 1, bool $autoRelease = false)
     {
         $this->key = $key;
@@ -31,23 +32,15 @@ class Lock
 
     private function registerLockUnlessRegistered(): void
     {
-        if (!$this->registered()) {
-            $this->id = sem_get(
-                ftok(__FILE__),
-                $this->maxAcquire,
-                self::PERMISSION,
-                $this->autoRelease
-            );
+        if (!$this->registered) {
+            $this->id = sem_get(crc32($this->key), $this->maxAcquire, self::PERMISSION, $this->autoRelease);
 
             if ($this->id === false) {
                 throw new RuntimeException('Register lock fail');
             }
-        }
-    }
 
-    private function registered(): bool
-    {
-        return $this->id instanceof SysvSemaphore;
+            $this->registered = true;
+        }
     }
 
     public function acquire(): bool
@@ -66,10 +59,30 @@ class Lock
 
     public function forceRelease(): bool
     {
-        if ($this->registered()) {
+        if (!$this->registered) {
             return false;
         }
 
         return sem_remove($this->id);
+    }
+
+    public function getId(): SysvSemaphore
+    {
+        return $this->id;
+    }
+
+    public function getMaxAcquire(): int
+    {
+        return $this->maxAcquire;
+    }
+
+    public function isAutoRelease(): bool
+    {
+        return $this->autoRelease;
+    }
+
+    public function isRegistered(): bool
+    {
+        return $this->registered;
     }
 }

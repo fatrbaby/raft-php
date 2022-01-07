@@ -6,5 +6,4 @@ namespace Raft\Net;
 
 class Server
 {
-
 }

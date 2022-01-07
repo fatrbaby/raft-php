@@ -6,5 +6,4 @@ namespace Raft;
 
 class Raft
 {
-
 }
